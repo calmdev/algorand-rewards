@@ -1,0 +1,111 @@
+version: 2
+pro: true
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: linux-build
+    builder: prebuilt
+    goos: [linux]
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - 386
+    prebuilt:
+      path: fyne-cross/bin/{{ .Os }}-{{ .Arch }}/algorewards
+    binary: bin/algorewards
+
+  - id: darwin-build
+    builder: prebuilt
+    goos: [darwin]
+    goarch:
+      - amd64
+      - arm64
+    prebuilt:
+      path: fyne-cross/bin/{{ .Os }}-{{ .Arch }}/algorewards
+    binary: bin/algorewards
+
+  - id: windows-build
+    builder: prebuilt
+    goos: [windows]
+    goarch:
+      - amd64
+      - arm64
+      - 386
+    prebuilt:
+      path: fyne-cross/bin/{{ .Os }}-{{ .Arch }}/Algorand Rewards.exe
+    binary: bin/Algorand Rewards
+
+archives:
+  - id: darwin-archive
+    builds: [darwin-build]
+    formats: [tar.gz]
+    name_template: &archive_name_template >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - src: fyne-cross/dist/{{ .Os }}-{{ .Arch }}/Algorand Rewards.app
+        dst: dist/Algorand Rewards.app
+
+  - id: linux-archive
+    builds: [linux-build]
+    formats: [tar.gz]
+    name_template: *archive_name_template
+    files:
+      - src: fyne-cross/dist/{{ .Os }}-{{ .Arch }}/Algorand Rewards.tar.xz
+        dst: dist/Algorand Rewards.tar.xz
+
+  - id: windows-archive
+    builds: [windows-build]
+    formats: [tar.gz]
+    name_template: *archive_name_template
+    files:
+      - src: fyne-cross/dist/{{ .Os }}-{{ .Arch }}/Algorand Rewards.exe.zip
+        dst: dist/Algorand Rewards.exe.zip
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+app_bundles:
+  - id: darwin-app
+    name: Algorand Rewards
+    icon: ./internal/ui/assets/algo-black-icon.icns
+    bundle: com.calmdev.algorand-rewards
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+dmg:
+  - id: darwin-dmg
+    use: appbundle
+    name: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replace: true
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+msi:
+  - id: windows-msi
+    wxs: ./build/package/windows/app.wsx
+    name: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .MsiArch }}"
+    replace: true
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    version: v3
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).

@@ -1,0 +1,20 @@
+{
+    "name": "algorand-rewards",
+    "workspaceFolder": "${localWorkspaceFolder}",
+    "dockerComposeFile": [
+        "docker-compose.yml"
+    ],
+    "service": "algorewards",
+    "postStartCommand": "go version",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "workbench.colorTheme": "Solarized Dark"
+            },
+            "extensions": [
+                "golang.go",
+                "ms-azuretools.vscode-docker"
+            ]
+        }
+    }
+}

@@ -1,0 +1,8 @@
+Website = "https://github.com/calmdev/algorand-rewards"
+
+[Details]
+  Icon = "internal/ui/assets/algo-black-icon.png"
+  Name = "Algorand Rewards"
+  ID = "com.calmdev.algorand-rewards"
+  Version = "1.0.0"
+  Build = 90
