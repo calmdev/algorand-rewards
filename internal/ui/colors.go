@@ -11,6 +11,8 @@ var (
 	// Colors
 	Black     = color.Black
 	Grey      = color.RGBA{128, 128, 128, 255}
+	LightGrey = color.RGBA{211, 211, 211, 255}
+	DarkGrey  = color.RGBA{23, 23, 24, 100}
 	DarkGreen = color.RGBA{0, 128, 0, 255}
 	White     = color.White
 )
@@ -27,7 +29,7 @@ func (m CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 		if variant == theme.VariantLight {
 			return White
 		}
-		return Black
+		return DarkGrey
 	}
 
 	if name == theme.ColorNameForeground {
@@ -35,6 +37,13 @@ func (m CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 			return Black
 		}
 		return White
+	}
+
+	if name == theme.ColorNameSeparator {
+		if variant == theme.VariantLight {
+			return LightGrey
+		}
+		return Black
 	}
 
 	return theme.DefaultTheme().Color(name, variant)
