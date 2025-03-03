@@ -12,6 +12,7 @@ func main() {
 	// App
 	a := app.NewWithID("com.calmdev.algorand-rewards")
 	a.SetIcon(ui.AlgoBlackIconResource)
+	a.Settings().SetTheme(&ui.CustomTheme{})
 
 	// Preferences
 	if a.Preferences().String("Address") != "" {

@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/calmdev/algorand-rewards/internal/algo"
 )
@@ -22,12 +23,12 @@ func RewardsPanel(payouts []algo.PayoutDate) fyne.CanvasObject {
 	}
 
 	// Stats
-	wins := canvas.NewText("Total Wins: "+algo.FormatInt(totalWins), White)
+	wins := canvas.NewText("Total Wins: "+algo.FormatInt(totalWins), theme.Color(theme.ColorNameForeground))
 	wins.TextStyle.Bold = true
 
-	rewards := canvas.NewText("Total Rewards: ", White)
+	rewards := canvas.NewText("Total Rewards: ", theme.Color(theme.ColorNameForeground))
 	rewards.TextStyle.Bold = true
-	rewardsTotal := canvas.NewText(algo.FormatFloat(totalPayout), White)
+	rewardsTotal := canvas.NewText(algo.FormatFloat(totalPayout), theme.Color(theme.ColorNameForeground))
 	rewardsTotal.TextStyle.Bold = true
 
 	spacer := layout.NewSpacer()
@@ -37,7 +38,7 @@ func RewardsPanel(payouts []algo.PayoutDate) fyne.CanvasObject {
 		wins,
 		spacer,
 		rewards,
-		LogoWhiteIcon(10),
+		LogoIcon(10),
 		rewardsTotal,
 		spacer,
 	)
@@ -66,9 +67,9 @@ func RewardsTable(payouts []algo.PayoutDate) fyne.CanvasObject {
 			return len(data), len(data[0])
 		},
 		func() fyne.CanvasObject {
-			text := canvas.NewText("", White)
+			text := canvas.NewText("", theme.Color(theme.ColorNameForeground))
 
-			logo := LogoWhiteIcon(10)
+			logo := LogoIcon(10)
 			logo.Hide()
 
 			hbox := container.NewHBox(logo, text)
@@ -82,7 +83,7 @@ func RewardsTable(payouts []algo.PayoutDate) fyne.CanvasObject {
 
 			text := hbox.Objects[1].(*canvas.Text)
 			text.Text = data[i.Row][i.Col]
-			text.Color = White
+			text.Color = theme.Color(theme.ColorNameForeground)
 			text.TextStyle = fyne.TextStyle{Bold: false, Italic: false}
 
 			logo := hbox.Objects[0].(*canvas.Image)

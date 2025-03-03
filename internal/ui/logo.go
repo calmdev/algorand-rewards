@@ -5,6 +5,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/theme"
 )
 
 //go:embed assets/algo-white-icon.png
@@ -28,8 +29,23 @@ var AlgoBlackIconResource = &fyne.StaticResource{
 	StaticContent: algoBlackIcon,
 }
 
-// LogoWhiteIcon returns the white Algorand icon.
-func LogoWhiteIcon(size float32) fyne.CanvasObject {
+//go:embed assets/algo-black-wordmark.png
+var algoBlackWordmark []byte
+var algoBlackWordmarkResource = &fyne.StaticResource{
+	StaticName:    "algo-black-wordmark.png",
+	StaticContent: algoBlackWordmark,
+}
+
+// LogoIcon returns the white Algorand icon.
+func LogoIcon(size float32) fyne.CanvasObject {
+	if fyne.CurrentApp().Settings().ThemeVariant() == theme.VariantLight {
+		logo := canvas.NewImageFromResource(AlgoBlackIconResource)
+		logo.FillMode = canvas.ImageFillContain
+		logo.SetMinSize(fyne.NewSize(size, size))
+
+		return logo
+	}
+
 	logo := canvas.NewImageFromResource(algoWhiteIconResource)
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(size, size))
@@ -37,8 +53,17 @@ func LogoWhiteIcon(size float32) fyne.CanvasObject {
 	return logo
 }
 
-// LogoWhiteWordMark returns the white Algorand wordmark.
-func LogoWhiteWordMark(size float32) fyne.CanvasObject {
+// LogoWordmark returns the white Algorand wordmark.
+func LogoWordmark(size float32) fyne.CanvasObject {
+	// if theme is light return the black logo
+	if fyne.CurrentApp().Settings().ThemeVariant() == theme.VariantLight {
+		logo := canvas.NewImageFromResource(algoBlackWordmarkResource)
+		logo.FillMode = canvas.ImageFillContain
+		logo.SetMinSize(fyne.NewSize(size, size/2))
+
+		return logo
+	}
+
 	logo := canvas.NewImageFromResource(algoWhiteWordmarkResource)
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(size, size/2))
