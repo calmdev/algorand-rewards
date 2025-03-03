@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image/color"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -62,4 +63,16 @@ func (m CustomTheme) Font(style fyne.TextStyle) fyne.Resource {
 // Size returns a size for the theme.
 func (m CustomTheme) Size(name fyne.ThemeSizeName) float32 {
 	return theme.DefaultTheme().Size(name)
+}
+
+// WatchForThemeVariantChanges watches for OS theme variant changes.
+func WatchForThemeVariantChanges(a fyne.App, w fyne.Window, themeVariant *fyne.ThemeVariant) {
+	for {
+		if a.Settings().ThemeVariant() != *themeVariant {
+			*themeVariant = a.Settings().ThemeVariant()
+			w.SetContent(RenderMainView())
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
 }

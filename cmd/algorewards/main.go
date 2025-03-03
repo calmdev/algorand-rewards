@@ -51,6 +51,10 @@ func main() {
 		),
 	))
 
+	// Watch for OS theme variant changes.
+	var themeVariant = a.Settings().ThemeVariant()
+	go ui.WatchForThemeVariantChanges(a, w, &themeVariant)
+
 	// Run
 	w.ShowAndRun()
 }
