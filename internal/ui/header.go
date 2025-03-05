@@ -11,10 +11,15 @@ import (
 )
 
 // Header returns the header of the application.
-func Header() fyne.CanvasObject {
+func Header(account *algo.Account) fyne.CanvasObject {
+	balanceTotal := canvas.NewText(algo.FormatFloat(account.FractionalBalance()), theme.Color(theme.ColorNameForeground))
+	balanceTotal.TextStyle.Bold = true
+
 	header := container.NewHBox(
 		LogoWordmark(70),
 		layout.NewSpacer(),
+		LogoIcon(10),
+		balanceTotal,
 		AccountStatusIcon(),
 		canvas.NewText(algo.ShortAddress(), theme.Color(theme.ColorNameForeground)),
 	)

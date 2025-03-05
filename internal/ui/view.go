@@ -16,9 +16,10 @@ var (
 // RenderMainView returns the main view.
 func RenderMainView() fyne.CanvasObject {
 	payouts := algo.Payouts()
+	account := algo.FetchAccount()
 
 	return container.NewBorder(
-		Header(),
+		Header(account),
 		RewardsPanel(payouts),
 		nil,
 		nil,
@@ -28,8 +29,10 @@ func RenderMainView() fyne.CanvasObject {
 
 // RenderSettingsView returns the settings view.
 func RenderSettingsView() fyne.CanvasObject {
+	account := algo.FetchAccount()
+
 	return container.NewBorder(
-		Header(),
+		Header(account),
 		nil,
 		nil,
 		nil,

@@ -34,7 +34,7 @@ func SettingsForm() fyne.CanvasObject {
 		algo.Address = algorandWalletAddress.Text
 		a.Preferences().SetString("Address", algo.Address)
 		// Clear the cache
-		algo.ClearRewardsCache()
+		algo.ClearCache()
 		// Close the settings window
 		a.Driver().AllWindows()[0].SetContent(RenderMainView())
 	})
