@@ -1,6 +1,7 @@
 package algo
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -262,4 +263,32 @@ func ClearRewardsCache() {
 	// Delete the cache file
 	cacheFile, _ := storage.Child(fyne.CurrentApp().Storage().RootURI(), RewardsCacheFile)
 	_ = storage.Delete(cacheFile)
+}
+
+// ExportRewards exports the rewards to a CSV file.
+func ExportRewards(writeCloser fyne.URIWriteCloser) {
+	// Create a new CSV writer
+	writer := csv.NewWriter(writeCloser)
+	defer writer.Flush()
+
+	// Write the CSV header
+	err := writer.Write([]string{"Date", "Wins", "Fees Collected", "Bonus", "Rewards"})
+	if err != nil {
+		return
+	}
+
+	// Write the CSV rows
+	payouts := Payouts()
+	for _, payout := range payouts {
+		err = writer.Write([]string{
+			payout.Date,
+			FormatInt(payout.TotalWins),
+			FormatFloat(payout.FractionalFeesCollected()),
+			FormatFloat(payout.FractionalBonus()),
+			FormatFloat(payout.FractionalPayout()),
+		})
+		if err != nil {
+			return
+		}
+	}
 }

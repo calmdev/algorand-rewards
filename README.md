@@ -20,6 +20,7 @@ Yes, the application does not store any sensitive information. Only the public w
 - Settings to configure wallet address.
 - Refresh option to fetch rewards again.
 - Caching for faster subsequent fetches.
+- Export rewards to CSV file.
 
 ## Installation
 Download the latest release from the [releases page](https://github.com/calmdev/algorand-rewards/releases) and install it on your system.

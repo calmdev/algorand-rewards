@@ -21,7 +21,7 @@ func main() {
 
 	// Window
 	w := a.NewWindow("Algorand Rewards")
-	w.Resize(fyne.NewSize(800, 400))
+	w.Resize(fyne.NewSize(ui.MainWindowWidth, ui.MainWindowHeight))
 	w.SetFixedSize(true)
 	w.CenterOnScreen()
 	w.SetMaster()
@@ -42,14 +42,7 @@ func main() {
 	}
 
 	// Menu
-	w.SetMainMenu(fyne.NewMainMenu(
-		fyne.NewMenu("File",
-			fyne.NewMenuItem("Settings", func() {
-				w.SetContent(ui.RenderSettingsView())
-				w.Show()
-			}),
-		),
-	))
+	w.SetMainMenu(ui.MainMenu(w))
 
 	// Watch for OS theme variant changes.
 	var themeVariant = a.Settings().ThemeVariant()
