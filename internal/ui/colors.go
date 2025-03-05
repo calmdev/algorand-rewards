@@ -15,6 +15,7 @@ var (
 	LightGrey = color.RGBA{211, 211, 211, 255}
 	DarkGrey  = color.RGBA{23, 23, 24, 255}
 	DarkGreen = color.RGBA{0, 128, 0, 255}
+	DarkRed   = color.RGBA{128, 0, 0, 255}
 	White     = color.White
 )
 

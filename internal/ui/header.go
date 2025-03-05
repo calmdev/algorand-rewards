@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"image/color"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -20,7 +22,7 @@ func Header(account *algo.Account) fyne.CanvasObject {
 		layout.NewSpacer(),
 		LogoIcon(10),
 		balanceTotal,
-		AccountStatusIcon(),
+		AccountStatusIcon(account),
 		canvas.NewText(algo.ShortAddress(), theme.Color(theme.ColorNameForeground)),
 	)
 
@@ -28,8 +30,17 @@ func Header(account *algo.Account) fyne.CanvasObject {
 }
 
 // AccountStatusIcon returns the account status icon.
-func AccountStatusIcon() fyne.Widget {
-	activity := iw.NewActivity()
+func AccountStatusIcon(account *algo.Account) fyne.Widget {
+	var c color.Color
+
+	// Check if account is eligible for rewards.
+	if account.IncentiveEligible {
+		c = DarkGreen
+	} else {
+		c = DarkRed
+	}
+
+	activity := iw.NewActivity(c)
 	activity.Start()
 
 	return activity

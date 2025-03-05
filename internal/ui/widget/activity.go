@@ -21,13 +21,16 @@ type Activity struct {
 	widget.Activity
 
 	started atomic.Bool
+	color   color.Color
 }
 
 // NewActivity returns a widget for indicating activity
 //
 // Since: 2.5
-func NewActivity() *Activity {
-	a := &Activity{}
+func NewActivity(c color.Color) *Activity {
+	a := &Activity{
+		color: c,
+	}
 	a.ExtendBaseWidget(a)
 	return a
 }
@@ -156,8 +159,14 @@ func (a *activityRenderer) scaleDot(dot *canvas.Circle, off float32) {
 	dot.Resize(fyne.NewSquareSize(rad * 2))
 
 	alpha := uint8(0 + int(float32(a.maxCol.A)*off))
-	// dot.FillColor = color.NRGBA{R: a.maxCol.R, G: a.maxCol.G, B: a.maxCol.B, A: alpha}
-	dot.FillColor = color.NRGBA{R: 0, G: 100, B: 0, A: alpha} // Dark Green
+	nrgba := a.parent.color.(color.RGBA)
+
+	dot.FillColor = color.NRGBA{
+		R: nrgba.R,
+		G: nrgba.G,
+		B: nrgba.B,
+		A: alpha,
+	}
 	dot.Refresh()
 }
 
