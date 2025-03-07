@@ -32,6 +32,11 @@ func FormatFloat(f float64) string {
 	return printer.Sprintf("%.6f", f)
 }
 
+// FormatFloatShort formats a float64 as a string with 2 decimal places.
+func FormatFloatShort(f float64) string {
+	return printer.Sprintf("%.2f", float64(int64(f*100))/100)
+}
+
 // FormatInt formats an int64 as a string.
 func FormatInt(i int64) string {
 	return printer.Sprintf("%d", i)

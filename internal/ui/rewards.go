@@ -22,25 +22,66 @@ func RewardsPanel(payouts []algo.PayoutDate) fyne.CanvasObject {
 		totalPayout += payout.FractionalPayout()
 	}
 
-	// Stats
-	wins := canvas.NewText("Total Wins: "+algo.FormatInt(totalWins), theme.Color(theme.ColorNameForeground))
-	wins.TextStyle.Bold = true
+	var minPayout float64
+	for _, payout := range payouts {
+		if minPayout == 0 {
+			minPayout = payout.FractionalPayout()
+			continue
+		}
+		if payout.FractionalPayout() < minPayout {
+			minPayout = payout.FractionalPayout()
+		}
+	}
 
-	rewards := canvas.NewText("Total Rewards: ", theme.Color(theme.ColorNameForeground))
+	var maxPayout float64
+	for _, payout := range payouts {
+		if payout.FractionalPayout() > maxPayout {
+			maxPayout = payout.FractionalPayout()
+		}
+	}
+
+	// Stats
+	wins := canvas.NewText("Wins: "+algo.FormatInt(totalWins), theme.Color(theme.ColorNameForeground))
+	wins.TextStyle.Bold = true
+	wins.TextSize = 12
+
+	minRewards := canvas.NewText("Min: ", theme.Color(theme.ColorNameForeground))
+	minRewards.TextStyle.Bold = true
+	minRewards.TextSize = 12
+	minRewardsTotal := canvas.NewText(algo.FormatFloatShort(minPayout), theme.Color(theme.ColorNameForeground))
+	minRewardsTotal.TextStyle.Bold = true
+	minRewardsTotal.TextSize = 12
+
+	maxRewards := canvas.NewText("Max: ", theme.Color(theme.ColorNameForeground))
+	maxRewards.TextStyle.Bold = true
+	maxRewards.TextSize = 12
+	maxRewardsTotal := canvas.NewText(algo.FormatFloatShort(maxPayout), theme.Color(theme.ColorNameForeground))
+	maxRewardsTotal.TextStyle.Bold = true
+	maxRewardsTotal.TextSize = 12
+
+	rewards := canvas.NewText("Rewards: ", theme.Color(theme.ColorNameForeground))
 	rewards.TextStyle.Bold = true
-	rewardsTotal := canvas.NewText(algo.FormatFloat(totalPayout), theme.Color(theme.ColorNameForeground))
+	rewards.TextSize = 12
+	rewardsTotal := canvas.NewText(algo.FormatFloatShort(totalPayout), theme.Color(theme.ColorNameForeground))
 	rewardsTotal.TextStyle.Bold = true
+	rewardsTotal.TextSize = 12
 
 	spacer := layout.NewSpacer()
 
 	stats := container.NewHBox(
-		spacer,
 		wins,
+		spacer,
+		minRewards,
+		LogoIcon(10),
+		minRewardsTotal,
+		spacer,
+		maxRewards,
+		LogoIcon(10),
+		maxRewardsTotal,
 		spacer,
 		rewards,
 		LogoIcon(10),
 		rewardsTotal,
-		spacer,
 	)
 
 	return container.New(layout.NewCustomPaddedLayout(12, 12, 10, 10), stats)
