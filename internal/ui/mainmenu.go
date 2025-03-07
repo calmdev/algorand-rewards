@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"fmt"
+	"net/url"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
@@ -46,6 +49,26 @@ func MainMenu(w fyne.Window) *fyne.MainMenu {
 					d.SetView(dialog.ListView)
 					d.Resize(fyne.NewSize(MainWindowWidth-100, MainWindowHeight-100))
 					d.Show()
+				},
+			},
+			fyne.NewMenuItemSeparator(),
+			&fyne.MenuItem{
+				Label: "Telemetry",
+				Action: func() {
+					guid := fyne.CurrentApp().Preferences().String("GUID")
+					if guid == "" {
+						dialog.ShowInformation("Telemetry", "Please set your GUID in the settings to enable telemetry.", w)
+						return
+					}
+					url := url.URL{
+						Scheme:   "https",
+						Host:     "g.nodely.io",
+						Path:     "/d/telemetry/node-telemetry",
+						RawQuery: fmt.Sprintf("var-GUID=%s&orgId=1&from=now-24h&to=now", guid),
+					}
+					if err := fyne.CurrentApp().OpenURL(&url); err != nil {
+						dialog.ShowError(err, w)
+					}
 				},
 			},
 		),
