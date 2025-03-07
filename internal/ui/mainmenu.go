@@ -10,7 +10,7 @@ import (
 // MainMenu returns the main menu.
 func MainMenu(w fyne.Window) *fyne.MainMenu {
 	return fyne.NewMainMenu(
-		fyne.NewMenu("File",
+		fyne.NewMenu("Account",
 			fyne.NewMenuItem("Settings", func() {
 				w.SetContent(RenderSettingsView())
 				w.Show()
