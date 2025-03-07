@@ -13,26 +13,36 @@ func SettingsForm() fyne.CanvasObject {
 	// App
 	a := fyne.CurrentApp()
 
-	// Input Label
-	label := widget.NewLabel("Algorand Wallet Address:")
-	label.Alignment = fyne.TextAlignLeading
-	label.TextStyle = fyne.TextStyle{Bold: false}
+	// Algorand Wallet Address Label
+	algorandWalletAddressLabel := widget.NewLabel("Algorand Wallet Address:")
+	algorandWalletAddressLabel.Alignment = fyne.TextAlignLeading
+	algorandWalletAddressLabel.TextStyle = fyne.TextStyle{Bold: false}
 
-	// Algorand Wallet Address settings
+	// Algorand Wallet Address setting
 	algorandWalletAddress := widget.NewEntry()
 	algorandWalletAddress.SetPlaceHolder("Enter your Algorand wallet address")
 	if a.Preferences().String("Address") != "" {
 		algorandWalletAddress.SetText(a.Preferences().String("Address"))
 	}
-	algorandWalletAddress.OnChanged = func(s string) {
-		// Update the Algorand wallet address
+
+	// GUID Label
+	guidLabel := widget.NewLabel("Telemetry GUID:")
+	guidLabel.Alignment = fyne.TextAlignLeading
+	guidLabel.TextStyle = fyne.TextStyle{Bold: false}
+
+	// GUID setting
+	guid := widget.NewEntry()
+	guid.SetPlaceHolder("Enter your GUID")
+	if a.Preferences().String("GUID") != "" {
+		guid.SetText(a.Preferences().String("GUID"))
 	}
 
 	// Save button
 	saveButton := widget.NewButton("Save", func() {
-		// Save the Algorand wallet address
+		// Save the preferences
 		algo.Address = algorandWalletAddress.Text
 		a.Preferences().SetString("Address", algo.Address)
+		a.Preferences().SetString("GUID", guid.Text)
 		// Clear the cache
 		algo.ClearCache()
 		// Close the settings window
@@ -41,8 +51,10 @@ func SettingsForm() fyne.CanvasObject {
 
 	// Form
 	form := container.NewVBox(
-		label,
+		algorandWalletAddressLabel,
 		algorandWalletAddress,
+		guidLabel,
+		guid,
 		saveButton,
 	)
 
