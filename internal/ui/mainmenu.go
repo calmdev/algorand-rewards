@@ -6,8 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
-	"github.com/calmdev/algorand-rewards/internal/algo"
 )
 
 // MainMenu returns the main menu.
@@ -45,7 +43,7 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 		Action: func() {
 			guid := fyne.CurrentApp().Preferences().String("GUID")
 			if guid == "" {
-				dialog.ShowInformation("Telemetry", "Please set your GUID in the settings to enable telemetry.", w)
+				showTelemetryDialog(w)
 				return
 			}
 			url := url.URL{
@@ -105,24 +103,7 @@ func rewardsMenu(w fyne.Window) *fyne.Menu {
 	exportRewards = &fyne.MenuItem{
 		Label: "Export Rewards",
 		Action: func() {
-			d := dialog.NewFileSave(
-				func(writer fyne.URIWriteCloser, err error) {
-					if err != nil {
-						return
-					}
-					if writer == nil {
-						return
-					}
-					defer writer.Close()
-					algo.ExportRewards(writer)
-				},
-				w,
-			)
-			d.SetFileName("rewards.csv")
-			d.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
-			d.SetView(dialog.ListView)
-			d.Resize(fyne.NewSize(MainWindowWidth-100, MainWindowHeight-100))
-			d.Show()
+			RewardsExportDialog(w)
 		},
 	}
 

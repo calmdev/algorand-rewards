@@ -4,7 +4,9 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/calmdev/algorand-rewards/internal/algo"
@@ -122,4 +124,30 @@ func RewardsTable(r *algo.Rewards) fyne.CanvasObject {
 	}
 
 	return container.New(layout.NewCustomPaddedLayout(0, 0, 10, 10), table)
+}
+
+// RewardsExportDialog opens a dialog to export rewards.
+func RewardsExportDialog(w fyne.Window) {
+	DialogOpen = true
+	d := dialog.NewFileSave(
+		func(writer fyne.URIWriteCloser, err error) {
+			if err != nil {
+				return
+			}
+			if writer == nil {
+				return
+			}
+			defer writer.Close()
+			algo.ExportRewards(writer)
+		},
+		w,
+	)
+	d.SetFileName("rewards.csv")
+	d.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
+	d.SetView(dialog.ListView)
+	d.Resize(fyne.NewSize(MainWindowWidth-50, MainWindowHeight-50))
+	d.Show()
+	d.SetOnClosed(func() {
+		DialogOpen = false
+	})
 }

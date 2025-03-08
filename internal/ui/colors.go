@@ -10,13 +10,14 @@ import (
 
 var (
 	// Colors
-	Black     = color.Black
-	Grey      = color.RGBA{128, 128, 128, 255}
-	LightGrey = color.RGBA{211, 211, 211, 255}
-	DarkGrey  = color.RGBA{23, 23, 24, 255}
-	DarkGreen = color.RGBA{0, 128, 0, 255}
-	DarkRed   = color.RGBA{128, 0, 0, 255}
-	White     = color.White
+	Transparent = color.Transparent
+	White       = color.White
+	Black       = color.Black
+	Grey        = color.RGBA{128, 128, 128, 255}
+	LightGrey   = color.RGBA{211, 211, 211, 255}
+	DarkGrey    = color.RGBA{23, 23, 24, 255}
+	DarkGreen   = color.RGBA{0, 128, 0, 255}
+	DarkRed     = color.RGBA{128, 0, 0, 255}
 )
 
 // CustomTheme is a custom theme for the application.
@@ -53,6 +54,16 @@ func (m CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 			return White
 		}
 		return DarkGrey
+	}
+
+	if name == theme.ColorNameShadow {
+		if DialogOpen {
+			return theme.DefaultTheme().Color(name, variant)
+		}
+		if variant == theme.VariantLight {
+			return Transparent
+		}
+		return Transparent
 	}
 
 	return theme.DefaultTheme().Color(name, variant)

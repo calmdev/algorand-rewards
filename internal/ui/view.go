@@ -11,6 +11,8 @@ var (
 	MainWindowWidth float32 = 800
 	// MainWindowHeight is the main window height.
 	MainWindowHeight float32 = 400
+	// DialogOpen is true when a dialog is open.
+	DialogOpen = false
 )
 
 // RenderMainView returns the main view.
