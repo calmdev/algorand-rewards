@@ -11,58 +11,30 @@ import (
 )
 
 // RewardsPanel returns a panel of reward stats.
-func RewardsPanel(payouts []algo.PayoutDate) fyne.CanvasObject {
-	var totalWins int64
-	for _, payout := range payouts {
-		totalWins += payout.TotalWins
-	}
-
-	var totalPayout float64
-	for _, payout := range payouts {
-		totalPayout += payout.FractionalPayout()
-	}
-
-	var minPayout float64
-	for _, payout := range payouts {
-		if minPayout == 0 {
-			minPayout = payout.FractionalPayout()
-			continue
-		}
-		if payout.FractionalPayout() < minPayout {
-			minPayout = payout.FractionalPayout()
-		}
-	}
-
-	var maxPayout float64
-	for _, payout := range payouts {
-		if payout.FractionalPayout() > maxPayout {
-			maxPayout = payout.FractionalPayout()
-		}
-	}
-
+func RewardsPanel(r *algo.Rewards) fyne.CanvasObject {
 	// Stats
-	wins := canvas.NewText("Wins: "+algo.FormatInt(totalWins), theme.Color(theme.ColorNameForeground))
+	wins := canvas.NewText("Wins: "+algo.FormatInt(r.TotalWins), theme.Color(theme.ColorNameForeground))
 	wins.TextStyle.Bold = true
 	wins.TextSize = 12
 
 	minRewards := canvas.NewText("Min: ", theme.Color(theme.ColorNameForeground))
 	minRewards.TextStyle.Bold = true
 	minRewards.TextSize = 12
-	minRewardsTotal := canvas.NewText(algo.FormatFloatShort(minPayout), theme.Color(theme.ColorNameForeground))
+	minRewardsTotal := canvas.NewText(algo.FormatFloatShort(r.MinPayout), theme.Color(theme.ColorNameForeground))
 	minRewardsTotal.TextStyle.Bold = true
 	minRewardsTotal.TextSize = 12
 
 	maxRewards := canvas.NewText("Max: ", theme.Color(theme.ColorNameForeground))
 	maxRewards.TextStyle.Bold = true
 	maxRewards.TextSize = 12
-	maxRewardsTotal := canvas.NewText(algo.FormatFloatShort(maxPayout), theme.Color(theme.ColorNameForeground))
+	maxRewardsTotal := canvas.NewText(algo.FormatFloatShort(r.MaxPayout), theme.Color(theme.ColorNameForeground))
 	maxRewardsTotal.TextStyle.Bold = true
 	maxRewardsTotal.TextSize = 12
 
 	rewards := canvas.NewText("Rewards: ", theme.Color(theme.ColorNameForeground))
 	rewards.TextStyle.Bold = true
 	rewards.TextSize = 12
-	rewardsTotal := canvas.NewText(algo.FormatFloatShort(totalPayout), theme.Color(theme.ColorNameForeground))
+	rewardsTotal := canvas.NewText(algo.FormatFloatShort(r.TotalPayout), theme.Color(theme.ColorNameForeground))
 	rewardsTotal.TextStyle.Bold = true
 	rewardsTotal.TextSize = 12
 
@@ -88,19 +60,8 @@ func RewardsPanel(payouts []algo.PayoutDate) fyne.CanvasObject {
 }
 
 // RewardsTable returns a table of rewards.
-func RewardsTable(payouts []algo.PayoutDate) fyne.CanvasObject {
-	var data = [][]string{{"Date", "Wins", "Fees Collected", "Bonus", "Rewards"}}
-
-	// Append payouts to data
-	for _, payout := range payouts {
-		data = append(data, []string{
-			payout.Date,
-			algo.FormatInt(payout.TotalWins),
-			algo.FormatFloat(payout.FractionalFeesCollected()),
-			algo.FormatFloat(payout.FractionalBonus()),
-			algo.FormatFloat(payout.FractionalPayout()),
-		})
-	}
+func RewardsTable(r *algo.Rewards) fyne.CanvasObject {
+	var data = r.Data()
 
 	// Table
 	table := widget.NewTable(

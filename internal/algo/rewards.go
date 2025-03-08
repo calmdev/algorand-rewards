@@ -13,6 +13,107 @@ import (
 	"fyne.io/fyne/v2/storage"
 )
 
+// Rewards represents a list of payouts.
+type Rewards struct {
+	Payouts     []PayoutDate
+	TotalPayout float64
+	TotalWins   int64
+	MinPayout   float64
+	MaxPayout   float64
+}
+
+// NewRewards creates a new Rewards instance.
+func NewRewards(payouts []PayoutDate) *Rewards {
+	rewards := Rewards{
+		Payouts: payouts,
+	}
+	rewards.PayoutsByPreference()
+	rewards.TotalPayout = TotalPayout(&rewards)
+	rewards.TotalWins = TotalWins(&rewards)
+	rewards.MinPayout = MinPayout(&rewards)
+	rewards.MaxPayout = MaxPayout(&rewards)
+	return &rewards
+}
+
+// Data returns the data for the rewards.
+func (r *Rewards) Data() [][]string {
+	var data = [][]string{{"Date", "Wins", "Fees Collected", "Bonus", "Rewards"}}
+
+	// Append payouts to data
+	for _, payout := range r.Payouts {
+		data = append(data, []string{
+			payout.Date,
+			FormatInt(payout.TotalWins),
+			FormatFloat(payout.FractionalFeesCollected()),
+			FormatFloat(payout.FractionalBonus()),
+			FormatFloat(payout.FractionalPayout()),
+		})
+	}
+
+	return data
+}
+
+// ByDay sorts the payouts by day.
+func (r *Rewards) ByDay() {
+	// Create a new slice to hold the sorted payouts
+	sortedPayouts := make([]PayoutDate, len(r.Payouts))
+	copy(sortedPayouts, r.Payouts)
+
+	// Sort the payouts by date
+	for i := range sortedPayouts {
+		for j := i + 1; j < len(sortedPayouts); j++ {
+			if sortedPayouts[i].Date < sortedPayouts[j].Date {
+				sortedPayouts[i], sortedPayouts[j] = sortedPayouts[j], sortedPayouts[i]
+			}
+		}
+	}
+
+	r.Payouts = sortedPayouts
+}
+
+// ByMonth returns the payouts by month.
+func (r *Rewards) ByMonth() {
+	// Group payouts by month
+	monthlyPayouts := make(map[string][]PayoutDate)
+	for _, payout := range r.Payouts {
+		month := payout.Date[:7] // Assuming the date format is YYYY-MM-DD
+		monthlyPayouts[month] = append(monthlyPayouts[month], payout)
+	}
+
+	var data []PayoutDate
+	// Aggregate data by month
+	for month, payouts := range monthlyPayouts {
+		var totalWins int64
+		var totalFees, totalBonus, totalRewards float64
+
+		for _, payout := range payouts {
+			totalWins += payout.TotalWins
+			totalFees += payout.FractionalFeesCollected()
+			totalBonus += payout.FractionalBonus()
+			totalRewards += payout.FractionalPayout()
+		}
+
+		data = append(data, PayoutDate{
+			Date:          month,
+			Payout:        int64(totalRewards * 1e6),
+			TotalWins:     totalWins,
+			Bonus:         int64(totalBonus * 1e6),
+			FeesCollected: int64(totalFees * 1e6 * 2),
+		})
+	}
+
+	// Sort the payouts by date
+	for i := range data {
+		for j := i + 1; j < len(data); j++ {
+			if data[i].Date < data[j].Date {
+				data[i], data[j] = data[j], data[i]
+			}
+		}
+	}
+
+	r.Payouts = data
+}
+
 // Blocks represents a list of block headers.
 type Blocks struct {
 	Blocks    []BlockHeader `json:"blocks"`
@@ -97,7 +198,7 @@ func fetchBlockHeadersRecursive(nextToken string, blocks []BlockHeader, afterTim
 }
 
 // Payouts returns a list of payouts for the current address.
-func Payouts() []PayoutDate {
+func Payouts() *Rewards {
 	cacheFile, err := storage.Child(fyne.CurrentApp().Storage().RootURI(), RewardsCacheFile)
 	if err != nil {
 		return nil
@@ -203,29 +304,8 @@ func Payouts() []PayoutDate {
 	for _, payout := range payoutsByDate {
 		payouts = append(payouts, payout)
 	}
-	// Find the max payout
-	var maxPayout int64
-	for _, payout := range payouts {
-		if payout.Payout > maxPayout {
-			maxPayout = payout.Payout
-		}
-	}
-	// Set the best day flag
-	for i := range payouts {
-		if payouts[i].Payout == maxPayout {
-			payouts[i].BestDay = true
-		}
-	}
-	// Create a new slice sorted by payout date in descending order
-	for i := range payouts {
-		for j := i + 1; j < len(payouts); j++ {
-			if payouts[i].Date < payouts[j].Date {
-				payouts[i], payouts[j] = payouts[j], payouts[i]
-			}
-		}
-	}
 
-	return payouts
+	return NewRewards(payouts)
 }
 
 // RewardsCacheFile is the rewards cache file.
@@ -244,24 +324,76 @@ func ExportRewards(writeCloser fyne.URIWriteCloser) {
 	writer := csv.NewWriter(writeCloser)
 	defer writer.Flush()
 
+	data := Payouts().Data()
+
 	// Write the CSV header
-	err := writer.Write([]string{"Date", "Wins", "Fees Collected", "Bonus", "Rewards"})
+	err := writer.Write(data[0])
 	if err != nil {
 		return
 	}
 
 	// Write the CSV rows
-	payouts := Payouts()
-	for _, payout := range payouts {
-		err = writer.Write([]string{
-			payout.Date,
-			FormatInt(payout.TotalWins),
-			FormatFloat(payout.FractionalFeesCollected()),
-			FormatFloat(payout.FractionalBonus()),
-			FormatFloat(payout.FractionalPayout()),
-		})
+	for _, payout := range data[1:] {
+		err = writer.Write(payout)
 		if err != nil {
 			return
 		}
+	}
+}
+
+// TotalPayout returns the total payout.
+func TotalPayout(r *Rewards) float64 {
+	var total float64
+	for _, payout := range r.Payouts {
+		total += payout.FractionalPayout()
+	}
+	return total
+}
+
+// Total wins returns the total wins.
+func TotalWins(r *Rewards) int64 {
+	var total int64
+	for _, payout := range r.Payouts {
+		total += payout.TotalWins
+	}
+	return total
+}
+
+// MinPayout returns the minimum payout.
+func MinPayout(r *Rewards) float64 {
+	var minPayout float64
+	for _, payout := range r.Payouts {
+		if minPayout == 0 {
+			minPayout = payout.FractionalPayout()
+			continue
+		}
+		if payout.FractionalPayout() < minPayout {
+			minPayout = payout.FractionalPayout()
+		}
+	}
+	return minPayout
+}
+
+// MaxPayout returns the maximum payout.
+func MaxPayout(r *Rewards) float64 {
+	var maxPayout float64
+	for _, payout := range r.Payouts {
+		if payout.FractionalPayout() > maxPayout {
+			maxPayout = payout.FractionalPayout()
+		}
+	}
+	return maxPayout
+}
+
+// PayoutsByPreference returns the payouts by preference.
+func (r *Rewards) PayoutsByPreference() {
+	// Check if the view is by day or by month
+	switch fyne.CurrentApp().Preferences().String("RewardsView") {
+	case "day":
+		r.ByDay()
+	case "month":
+		r.ByMonth()
+	default:
+		r.ByDay()
 	}
 }
