@@ -5,12 +5,15 @@
 help:
 	@cat $(MAKEFILE_LIST) | docker run --rm -i xanders/make-help
 
-# Build the project cross-platform.
+# Build the project.
+# By default, it builds for the current platform.
 # Usage: `make build`
+# You can specify a different platform by setting the OS and ARCH variables.
+# Usage: `make build OS=windows ARCH=x86_64`
 build:
-	scripts/build.sh
+	scripts/build.sh $(OS) $(ARCH)
 
-# Run project from source code for the current platform.
+# Run project from source code for the current OS and architecture.
 # Usage: `make run`
 run:
 	go run cmd/algorewards/main.go
@@ -22,7 +25,8 @@ lint:
 
 # Release the project.
 # Usage: `make release`
-release: 
+release:
+	$(MAKE) build OS=all ARCH=all
 	goreleaser release --clean
 
 # Generate a snapshot release.
