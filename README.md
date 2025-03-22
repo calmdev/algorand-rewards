@@ -15,12 +15,33 @@ This application is for anyone who wants to track rewards from Algorand.
 Yes, the application does not store any sensitive information. Only the public wallet address is stored in the application settings. The application does not have access to or make use of private keys or any other sensitive information. If you are still concerned, you can review the source code and build the application from source yourself.
 
 ## Features
-- Fetch rewards for a wallet address.
-- Display rewards in a table grouped by date.
-- Settings to configure wallet address.
-- Refresh option to fetch rewards again.
-- Caching for faster subsequent fetches.
-- Export rewards to CSV file.
+- Rewards
+    - Fetch rewards for a wallet address.
+    - Display rewards by day, day of week, week, month, quarter and year.
+    - Stats for total wins, total rewards, minimum and maximum rewards by view.
+    - Links to algonoderewards.com for alternate reward tracking.
+- Settings
+    - Configure wallet address.
+        - Used to fetch account, rewards and transactions.
+    - Configure nodely telemetry guid.
+        - Links to nodely grafana dashboard.
+- Refresh
+    - Fetch rewards again.
+- Caching
+    - Caching for faster subsequent fetches.
+- Export
+    - Export rewards to CSV file.
+    - Export transactions to CSV file.
+- Transactions
+    - Basic transaction history display.
+    - Links to allo.info for more detailed transaction history.
+- Appearance
+    - Dark mode support.
+    - Light mode support.
+- Platform Support
+    - Windows
+    - MacOS
+    - Linux
 
 ## Installation
 Download the latest release from the [releases page](https://github.com/calmdev/algorand-rewards/releases) and install it on your system.
