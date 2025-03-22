@@ -58,4 +58,21 @@ func (v *SettingsView) Render(a *app.App) {
 	Layout.currentView = v
 }
 
+// TransactionsView struct represents the transactions view.
+type TransactionsView struct{}
+
+// Render renders the transactions view.
+func (v *TransactionsView) Render(a *app.App) {
+	Layout.loading()
+
+	go func() {
+		account := algo.FetchAccount(a.Address())
+		transactions := algo.FetchTransactions(a.Address())
+
+		Layout.updateTopBar(Header(account))
+		Layout.updateMainContent(TransactionsList(account, transactions))
+		Layout.currentView = v
+	}()
+
+	Layout.markActiveButton(1)
 }

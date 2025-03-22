@@ -14,6 +14,7 @@ func MainMenu(a *app.App, w fyne.Window) *fyne.MainMenu {
 	return fyne.NewMainMenu(
 		accountMenu(a, w),
 		rewardsMenu(a, w),
+		transactionsMenu(a, w),
 	)
 }
 
@@ -191,10 +192,28 @@ func rewardsMenu(a *app.App, w fyne.Window) *fyne.Menu {
 	)
 }
 
+// transactionsMenu returns the transactions menu.
+func transactionsMenu(a *app.App, w fyne.Window) *fyne.Menu {
+	history := &fyne.MenuItem{
+		Label: "History",
+		Action: func() {
+			RenderView(&TransactionsView{})
+			w.Show()
+		},
+	}
+	exportTransactions := &fyne.MenuItem{
+		Label: "Export Transactions",
+		Action: func() {
+			TransactionsExportDialog(a, w)
 		},
 	}
 
 	sep := fyne.NewMenuItemSeparator()
 
-	return fyne.NewMenu("Rewards", rewardsByDay, rewardsByMonth, sep, exportRewards)
+	return fyne.NewMenu(
+		"Transactions",
+		history,
+		sep,
+		exportTransactions,
+	)
 }

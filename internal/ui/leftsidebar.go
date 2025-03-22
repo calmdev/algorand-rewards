@@ -11,6 +11,7 @@ import (
 func LeftSidebar() fyne.CanvasObject {
 	var rewards *widget.Button
 	var settings *widget.Button
+	var transactions *widget.Button
 
 	var iconContainer *fyne.Container
 
@@ -32,9 +33,18 @@ func LeftSidebar() fyne.CanvasObject {
 		},
 	}
 
+	transactions = &widget.Button{
+		Importance: widget.LowImportance,
+		Icon:       theme.HistoryIcon(),
+		OnTapped: func() {
+			RenderView(&TransactionsView{})
+			iconContainer.Refresh()
+		},
+	}
 
 	iconContainer = container.NewVBox(
 		rewards,
+		transactions,
 		settings,
 	)
 

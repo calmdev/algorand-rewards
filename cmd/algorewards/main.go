@@ -18,6 +18,7 @@ func main() {
 	a.VersionCheck(func() {
 		_ = a.ClearCacheFile(
 			algo.RewardsCacheFile,
+			algo.TransactionCacheFile,
 		)
 	})
 
