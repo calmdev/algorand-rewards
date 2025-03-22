@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fyne.io/fyne/v2"
+	"github.com/calmdev/algorand-rewards/internal/app"
 )
 
 // SystemTray returns the system tray menu.
-func SystemTray(w fyne.Window) *fyne.Menu {
-	return fyne.NewMenu("Algorand Rewards",
+func SystemTray(a *app.App, w fyne.Window) *fyne.Menu {
+	return fyne.NewMenu(app.AppName,
 		fyne.NewMenuItem("Show", func() {
 			w.Show()
 		}),
@@ -14,11 +15,11 @@ func SystemTray(w fyne.Window) *fyne.Menu {
 			w.Hide()
 		}),
 		fyne.NewMenuItem("Refresh", func() {
-			w.SetContent(RenderMainView())
+			RenderView(&RewardsView{})
 		}),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("Quit", func() {
-			fyne.CurrentApp().Quit()
+			a.Quit()
 		}),
 	)
 }

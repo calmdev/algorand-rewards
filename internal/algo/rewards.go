@@ -4,14 +4,20 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"time"
 
+	"sort"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
+	"github.com/calmdev/algorand-rewards/internal/app"
+	"github.com/calmdev/algorand-rewards/internal/format"
+	"github.com/calmdev/algorand-rewards/internal/nodely"
 )
+
+// RewardsCacheFile is the rewards cache file.
+var RewardsCacheFile = "rewards.json"
 
 // Rewards represents a list of payouts.
 type Rewards struct {
@@ -27,11 +33,11 @@ func NewRewards(payouts []PayoutDate) *Rewards {
 	rewards := Rewards{
 		Payouts: payouts,
 	}
-	rewards.PayoutsByPreference()
-	rewards.TotalPayout = TotalPayout(&rewards)
-	rewards.TotalWins = TotalWins(&rewards)
-	rewards.MinPayout = MinPayout(&rewards)
-	rewards.MaxPayout = MaxPayout(&rewards)
+	rewards.SortByView(app.CurrentApp().RewardsView())
+	rewards.TotalPayout = TotalPayout(rewards.Payouts)
+	rewards.TotalWins = TotalWins(rewards.Payouts)
+	rewards.MinPayout = MinPayout(rewards.Payouts)
+	rewards.MaxPayout = MaxPayout(rewards.Payouts)
 	return &rewards
 }
 
@@ -43,10 +49,10 @@ func (r *Rewards) Data() [][]string {
 	for _, payout := range r.Payouts {
 		data = append(data, []string{
 			payout.Date,
-			FormatInt(payout.TotalWins),
-			FormatFloat(payout.FractionalFeesCollected()),
-			FormatFloat(payout.FractionalBonus()),
-			FormatFloat(payout.FractionalPayout()),
+			format.Int(payout.TotalWins),
+			format.Float(payout.AlgoFeesCollected()),
+			format.Float(payout.AlgoBonus()),
+			format.Float(payout.AlgoPayout()),
 		})
 	}
 
@@ -71,7 +77,102 @@ func (r *Rewards) ByDay() {
 	r.Payouts = sortedPayouts
 }
 
-// ByMonth returns the payouts by month.
+// ByDayofWeek sorts the payouts by day of the week.
+func (r *Rewards) ByDayofWeek() {
+	// Group payouts by day of the week
+	weeklyPayouts := make(map[string][]PayoutDate)
+	for _, payout := range r.Payouts {
+		// Get the day of the week from string YYYY-MM-DD
+		date := payout.Date
+		dateTime, err := time.Parse("2006-01-02", date)
+		if err != nil {
+			continue
+		}
+		dayOfWeek := dateTime.Weekday().String()
+		weeklyPayouts[dayOfWeek] = append(weeklyPayouts[dayOfWeek], payout)
+	}
+	var data []PayoutDate
+	// Aggregate data by day of the week
+	for day, payouts := range weeklyPayouts {
+		var totalWins int64
+		var totalFees, totalBonus, totalRewards float64
+
+		for _, payout := range payouts {
+			totalWins += payout.TotalWins
+			totalFees += payout.AlgoFeesCollected()
+			totalBonus += payout.AlgoBonus()
+			totalRewards += payout.AlgoPayout()
+		}
+
+		data = append(data, PayoutDate{
+			Date:          day,
+			Payout:        int64(totalRewards * 1e6),
+			TotalWins:     totalWins,
+			Bonus:         int64(totalBonus * 1e6),
+			FeesCollected: int64(totalFees * 1e6 * 2),
+		})
+	}
+	// Sort the payouts by day of the week start at Monday
+	daysOfWeek := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	var sortedData []PayoutDate
+	for _, day := range daysOfWeek {
+		for _, payout := range data {
+			if payout.Date == day {
+				sortedData = append(sortedData, payout)
+				break
+			}
+		}
+	}
+
+	r.Payouts = sortedData
+}
+
+// ByWeek sorts the payouts by week.
+func (r *Rewards) ByWeek() {
+	// Group payouts by week
+	weeklyPayouts := make(map[string][]PayoutDate)
+	for _, payout := range r.Payouts {
+		date := payout.Date
+		dateTime, err := time.Parse("2006-01-02", date)
+		if err != nil {
+			continue
+		}
+		year, week := dateTime.ISOWeek()
+		weekKey := fmt.Sprintf("%d-W%02d", year, week)
+		weeklyPayouts[weekKey] = append(weeklyPayouts[weekKey], payout)
+	}
+
+	var data []PayoutDate
+	// Aggregate data by week
+	for week, payouts := range weeklyPayouts {
+		var totalWins int64
+		var totalFees, totalBonus, totalRewards float64
+
+		for _, payout := range payouts {
+			totalWins += payout.TotalWins
+			totalFees += payout.AlgoFeesCollected()
+			totalBonus += payout.AlgoBonus()
+			totalRewards += payout.AlgoPayout()
+		}
+
+		data = append(data, PayoutDate{
+			Date:          week,
+			Payout:        int64(totalRewards * 1e6),
+			TotalWins:     totalWins,
+			Bonus:         int64(totalBonus * 1e6),
+			FeesCollected: int64(totalFees * 1e6 * 2),
+		})
+	}
+
+	// Sort the payouts by week using sort.Slice
+	sort.Slice(data, func(i, j int) bool {
+		return data[i].Date > data[j].Date
+	})
+
+	r.Payouts = data
+}
+
+// ByMonth sorts the payouts by month.
 func (r *Rewards) ByMonth() {
 	// Group payouts by month
 	monthlyPayouts := make(map[string][]PayoutDate)
@@ -88,9 +189,9 @@ func (r *Rewards) ByMonth() {
 
 		for _, payout := range payouts {
 			totalWins += payout.TotalWins
-			totalFees += payout.FractionalFeesCollected()
-			totalBonus += payout.FractionalBonus()
-			totalRewards += payout.FractionalPayout()
+			totalFees += payout.AlgoFeesCollected()
+			totalBonus += payout.AlgoBonus()
+			totalRewards += payout.AlgoPayout()
 		}
 
 		data = append(data, PayoutDate{
@@ -112,6 +213,159 @@ func (r *Rewards) ByMonth() {
 	}
 
 	r.Payouts = data
+}
+
+// ByQuarter sorts the payouts by quarter.
+func (r *Rewards) ByQuarter() {
+	// Group payouts by quarter
+	quarterlyPayouts := make(map[string][]PayoutDate)
+	for _, payout := range r.Payouts {
+		year := payout.Date[:4] // Assuming the date format is YYYY-MM-DD
+		month := payout.Date[5:7]
+		var quarter string
+		switch month {
+		case "01", "02", "03":
+			quarter = year + "-Q1"
+		case "04", "05", "06":
+			quarter = year + "-Q2"
+		case "07", "08", "09":
+			quarter = year + "-Q3"
+		case "10", "11", "12":
+			quarter = year + "-Q4"
+		}
+		quarterlyPayouts[quarter] = append(quarterlyPayouts[quarter], payout)
+	}
+
+	var data []PayoutDate
+	// Aggregate data by quarter
+	for quarter, payouts := range quarterlyPayouts {
+		var totalWins int64
+		var totalFees, totalBonus, totalRewards float64
+
+		for _, payout := range payouts {
+			totalWins += payout.TotalWins
+			totalFees += payout.AlgoFeesCollected()
+			totalBonus += payout.AlgoBonus()
+			totalRewards += payout.AlgoPayout()
+		}
+
+		data = append(data, PayoutDate{
+			Date:          quarter,
+			Payout:        int64(totalRewards * 1e6),
+			TotalWins:     totalWins,
+			Bonus:         int64(totalBonus * 1e6),
+			FeesCollected: int64(totalFees * 1e6 * 2),
+		})
+	}
+
+	r.Payouts = data
+}
+
+// ByYear sorts the payouts by year.
+func (r *Rewards) ByYear() {
+	// Group payouts by year
+	yearlyPayouts := make(map[string][]PayoutDate)
+	for _, payout := range r.Payouts {
+		year := payout.Date[:4] // Assuming the date format is YYYY-MM-DD
+		yearlyPayouts[year] = append(yearlyPayouts[year], payout)
+	}
+
+	var data []PayoutDate
+	// Aggregate data by year
+	for year, payouts := range yearlyPayouts {
+		var totalWins int64
+		var totalFees, totalBonus, totalRewards float64
+
+		for _, payout := range payouts {
+			totalWins += payout.TotalWins
+			totalFees += payout.AlgoFeesCollected()
+			totalBonus += payout.AlgoBonus()
+			totalRewards += payout.AlgoPayout()
+		}
+
+		data = append(data, PayoutDate{
+			Date:          year,
+			Payout:        int64(totalRewards * 1e6),
+			TotalWins:     totalWins,
+			Bonus:         int64(totalBonus * 1e6),
+			FeesCollected: int64(totalFees * 1e6 * 2),
+		})
+	}
+
+	// Sort the payouts by date
+	for i := range data {
+		for j := i + 1; j < len(data); j++ {
+			if data[i].Date < data[j].Date {
+				data[i], data[j] = data[j], data[i]
+			}
+		}
+	}
+
+	r.Payouts = data
+}
+
+// TotalPayout returns the total payout.
+func TotalPayout(payouts []PayoutDate) float64 {
+	var total float64
+	for _, payout := range payouts {
+		total += payout.AlgoPayout()
+	}
+	return total
+}
+
+// Total wins returns the total wins.
+func TotalWins(payouts []PayoutDate) int64 {
+	var total int64
+	for _, payout := range payouts {
+		total += payout.TotalWins
+	}
+	return total
+}
+
+// MinPayout returns the minimum payout.
+func MinPayout(payouts []PayoutDate) float64 {
+	var minPayout float64
+	for _, payout := range payouts {
+		if minPayout == 0 {
+			minPayout = payout.AlgoPayout()
+			continue
+		}
+		if payout.AlgoPayout() < minPayout {
+			minPayout = payout.AlgoPayout()
+		}
+	}
+	return minPayout
+}
+
+// MaxPayout returns the maximum payout.
+func MaxPayout(payouts []PayoutDate) float64 {
+	var maxPayout float64
+	for _, payout := range payouts {
+		if payout.AlgoPayout() > maxPayout {
+			maxPayout = payout.AlgoPayout()
+		}
+	}
+	return maxPayout
+}
+
+// SortByView sorts the rewards by the given view.
+func (r *Rewards) SortByView(view string) {
+	switch view {
+	case "day":
+		r.ByDay()
+	case "dayOfWeek":
+		r.ByDayofWeek()
+	case "week":
+		r.ByWeek()
+	case "month":
+		r.ByMonth()
+	case "quarter":
+		r.ByQuarter()
+	case "year":
+		r.ByYear()
+	default:
+		r.ByDay()
+	}
 }
 
 // Blocks represents a list of block headers.
@@ -148,25 +402,26 @@ type PayoutDate struct {
 	BestDay       bool   `json:"bestDay"`
 }
 
-// FractionalPayout returns the payout in fractional algos.
-func (pd *PayoutDate) FractionalPayout() float64 {
+// AlgoPayout returns the payout in Algos.
+func (pd *PayoutDate) AlgoPayout() float64 {
 	return float64(pd.Payout) / 1e6
 }
 
-// FractionalBonus returns the bonus in fractional algos.
-func (pd *PayoutDate) FractionalBonus() float64 {
+// AlgoBonus returns the bonus in Algos.
+func (pd *PayoutDate) AlgoBonus() float64 {
 	return float64(pd.Bonus) / 1e6
 }
 
-// FractionalFeesCollected returns the fees collected in fractional algos.
-func (pd *PayoutDate) FractionalFeesCollected() float64 {
+// AlgoFeesCollected returns the fees collected in Algos.
+func (pd *PayoutDate) AlgoFeesCollected() float64 {
 	return float64(pd.FeesCollected) / 1e6 / 2
 }
 
 // fetchBlockHeadersRecursive returns a list of block headers recursively.
-func fetchBlockHeadersRecursive(nextToken string, blocks []BlockHeader, afterTime time.Time) []BlockHeader {
-	client := &http.Client{}
-	url := "https://mainnet-idx.4160.nodely.dev/v2/block-headers?proposers=" + Address
+//
+// Docs: https://nodely.io/swagger/index.html?url=/swagger/api/4160/indexer.oas3.yml#/search/searchForBlockHeaders
+func fetchBlockHeadersRecursive(client *nodely.ClientIndexer, address, nextToken string, blocks []BlockHeader, afterTime time.Time) []BlockHeader {
+	url := "/v2/block-headers?proposers=" + address
 	if nextToken != "" {
 		url += "&next=" + nextToken
 	}
@@ -174,14 +429,12 @@ func fetchBlockHeadersRecursive(nextToken string, blocks []BlockHeader, afterTim
 		url += "&after-time=" + afterTime.Format(time.RFC3339)
 		fmt.Println("After time:", afterTime.Format(time.RFC3339))
 	}
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
-	req.Header.Add("accept", "application/json")
-	res, _ := client.Do(req)
-	body, _ := io.ReadAll(res.Body)
 
-	// unmarshal json
 	var blockHeaders Blocks
-	_ = json.Unmarshal([]byte(body), &blockHeaders)
+	err := client.Get(url, &blockHeaders)
+	if err != nil {
+		return blocks
+	}
 
 	blocks = append(blocks, blockHeaders.Blocks...)
 
@@ -189,7 +442,7 @@ func fetchBlockHeadersRecursive(nextToken string, blocks []BlockHeader, afterTim
 
 	if blockHeaders.NextToken != "" {
 		fmt.Println("Next token:", blockHeaders.NextToken)
-		return fetchBlockHeadersRecursive(blockHeaders.NextToken, blocks, afterTime)
+		return fetchBlockHeadersRecursive(client, address, blockHeaders.NextToken, blocks, afterTime)
 	}
 
 	fmt.Printf("Fetched %d blocks\n", len(blocks))
@@ -197,9 +450,11 @@ func fetchBlockHeadersRecursive(nextToken string, blocks []BlockHeader, afterTim
 	return blocks
 }
 
-// Payouts returns a list of payouts for the current address.
-func Payouts() *Rewards {
-	cacheFile, err := storage.Child(fyne.CurrentApp().Storage().RootURI(), RewardsCacheFile)
+// FetchRewards returns a list of payouts for the current address.
+func FetchRewards(address string) *Rewards {
+	client := nodely.NewClientIndexer()
+
+	cacheFile, err := app.CurrentApp().CacheFile(RewardsCacheFile)
 	if err != nil {
 		return nil
 	}
@@ -232,7 +487,7 @@ func Payouts() *Rewards {
 	}
 
 	// Fetch new blocks recursively starting from the latest timestamp
-	newBlocks := fetchBlockHeadersRecursive("", []BlockHeader{}, latestTime)
+	newBlocks := fetchBlockHeadersRecursive(client, address, "", []BlockHeader{}, latestTime)
 	blocks = append(blocks, newBlocks...)
 
 	// Write the updated blocks back to the cache file
@@ -308,23 +563,13 @@ func Payouts() *Rewards {
 	return NewRewards(payouts)
 }
 
-// RewardsCacheFile is the rewards cache file.
-var RewardsCacheFile = "rewards.json"
-
-// ClearRewardsCache clears the rewards cache.
-func ClearRewardsCache() {
-	// Delete the rewards cache file
-	rewardsCacheFile, _ := storage.Child(fyne.CurrentApp().Storage().RootURI(), RewardsCacheFile)
-	_ = storage.Delete(rewardsCacheFile)
-}
-
 // ExportRewards exports the rewards to a CSV file.
-func ExportRewards(writeCloser fyne.URIWriteCloser) {
+func ExportRewards(address string, writeCloser fyne.URIWriteCloser) {
 	// Create a new CSV writer
 	writer := csv.NewWriter(writeCloser)
 	defer writer.Flush()
 
-	data := Payouts().Data()
+	data := FetchRewards(address).Data()
 
 	// Write the CSV header
 	err := writer.Write(data[0])
@@ -338,62 +583,5 @@ func ExportRewards(writeCloser fyne.URIWriteCloser) {
 		if err != nil {
 			return
 		}
-	}
-}
-
-// TotalPayout returns the total payout.
-func TotalPayout(r *Rewards) float64 {
-	var total float64
-	for _, payout := range r.Payouts {
-		total += payout.FractionalPayout()
-	}
-	return total
-}
-
-// Total wins returns the total wins.
-func TotalWins(r *Rewards) int64 {
-	var total int64
-	for _, payout := range r.Payouts {
-		total += payout.TotalWins
-	}
-	return total
-}
-
-// MinPayout returns the minimum payout.
-func MinPayout(r *Rewards) float64 {
-	var minPayout float64
-	for _, payout := range r.Payouts {
-		if minPayout == 0 {
-			minPayout = payout.FractionalPayout()
-			continue
-		}
-		if payout.FractionalPayout() < minPayout {
-			minPayout = payout.FractionalPayout()
-		}
-	}
-	return minPayout
-}
-
-// MaxPayout returns the maximum payout.
-func MaxPayout(r *Rewards) float64 {
-	var maxPayout float64
-	for _, payout := range r.Payouts {
-		if payout.FractionalPayout() > maxPayout {
-			maxPayout = payout.FractionalPayout()
-		}
-	}
-	return maxPayout
-}
-
-// PayoutsByPreference returns the payouts by preference.
-func (r *Rewards) PayoutsByPreference() {
-	// Check if the view is by day or by month
-	switch fyne.CurrentApp().Preferences().String("RewardsView") {
-	case "day":
-		r.ByDay()
-	case "month":
-		r.ByMonth()
-	default:
-		r.ByDay()
 	}
 }

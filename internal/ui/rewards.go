@@ -1,6 +1,11 @@
 package ui
 
 import (
+	"fmt"
+	"image/color"
+	"net/url"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -10,35 +15,48 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/calmdev/algorand-rewards/internal/algo"
+	"github.com/calmdev/algorand-rewards/internal/app"
+	"github.com/calmdev/algorand-rewards/internal/format"
+	iw "github.com/calmdev/algorand-rewards/internal/ui/widget"
 )
 
 // RewardsPanel returns a panel of reward stats.
-func RewardsPanel(r *algo.Rewards) fyne.CanvasObject {
-	// Stats
-	wins := canvas.NewText("Wins: "+algo.FormatInt(r.TotalWins), theme.Color(theme.ColorNameForeground))
-	wins.TextStyle.Bold = true
-	wins.TextSize = 12
+func RewardsPanel(account *algo.Account, r *algo.Rewards) fyne.CanvasObject {
+	// createText creates a new text or hyperlink for the rewards panel.
+	createText := func(label, value string, bold bool, valueURL *url.URL, icon fyne.CanvasObject) *fyne.Container {
+		text := canvas.NewText(label, theme.Color(theme.ColorNameForeground))
+		text.TextStyle.Bold = bold
+		text.TextSize = 12
 
-	minRewards := canvas.NewText("Min: ", theme.Color(theme.ColorNameForeground))
-	minRewards.TextStyle.Bold = true
-	minRewards.TextSize = 12
-	minRewardsTotal := canvas.NewText(algo.FormatFloatShort(r.MinPayout), theme.Color(theme.ColorNameForeground))
-	minRewardsTotal.TextStyle.Bold = true
-	minRewardsTotal.TextSize = 12
+		var valueObj fyne.CanvasObject
+		if valueURL != nil {
+			valueObj = iw.NewHyperlink(value, valueURL)
+			valueObj.(*iw.Hyperlink).TextSize = 12
+			valueObj.(*iw.Hyperlink).TextStyle.Bold = true
+			valueObj.(*iw.Hyperlink).Color = theme.Color(theme.ColorNameHyperlink)
+		} else {
+			valueObj = canvas.NewText(value, theme.Color(theme.ColorNameForeground))
+			valueObj.(*canvas.Text).TextSize = 12
+			valueObj.(*canvas.Text).TextStyle.Bold = true
+		}
 
-	maxRewards := canvas.NewText("Max: ", theme.Color(theme.ColorNameForeground))
-	maxRewards.TextStyle.Bold = true
-	maxRewards.TextSize = 12
-	maxRewardsTotal := canvas.NewText(algo.FormatFloatShort(r.MaxPayout), theme.Color(theme.ColorNameForeground))
-	maxRewardsTotal.TextStyle.Bold = true
-	maxRewardsTotal.TextSize = 12
+		components := []fyne.CanvasObject{text, layout.NewSpacer()}
+		if icon != nil {
+			components = append(components, icon)
+		}
+		components = append(components, valueObj)
 
-	rewards := canvas.NewText("Rewards: ", theme.Color(theme.ColorNameForeground))
-	rewards.TextStyle.Bold = true
-	rewards.TextSize = 12
-	rewardsTotal := canvas.NewText(algo.FormatFloatShort(r.TotalPayout), theme.Color(theme.ColorNameForeground))
-	rewardsTotal.TextStyle.Bold = true
-	rewardsTotal.TextSize = 12
+		return container.NewHBox(components...)
+	}
+
+	wins := createText("Wins: ", format.Int(r.TotalWins), true, nil, nil)
+	minRewards := createText("Min: ", format.FloatShort(r.MinPayout), true, nil, AlgoIcon(10))
+	maxRewards := createText("Max: ", format.FloatShort(r.MaxPayout), true, nil, AlgoIcon(10))
+	rewards := createText("Rewards: ", format.FloatShort(r.TotalPayout), true, &url.URL{
+		Scheme: "https",
+		Host:   "algonoderewards.com",
+		Path:   fmt.Sprintf("/%s", account.Address),
+	}, AlgoIcon(10))
 
 	spacer := layout.NewSpacer()
 
@@ -46,89 +64,124 @@ func RewardsPanel(r *algo.Rewards) fyne.CanvasObject {
 		wins,
 		spacer,
 		minRewards,
-		LogoIcon(10),
-		minRewardsTotal,
 		spacer,
 		maxRewards,
-		LogoIcon(10),
-		maxRewardsTotal,
 		spacer,
 		rewards,
-		LogoIcon(10),
-		rewardsTotal,
 	)
 
-	return container.New(layout.NewCustomPaddedLayout(12, 12, 10, 10), stats)
+	return container.New(layout.NewCustomPaddedLayout(5, 5, 5, 5), stats)
 }
 
-// RewardsTable returns a table of rewards.
-func RewardsTable(r *algo.Rewards) fyne.CanvasObject {
-	var data = r.Data()
+// RewardsList returns a list of rewards.
+func RewardsList(account *algo.Account, r *algo.Rewards) fyne.CanvasObject {
+	var l *appLayout
+	var data = r.Payouts
+	var offset int
+	var content *fyne.Container
 
-	// Table
-	table := widget.NewTable(
-		func() (int, int) {
-			return len(data), len(data[0])
-		},
-		func() fyne.CanvasObject {
-			text := canvas.NewText("", theme.Color(theme.ColorNameForeground))
+	var selected *iw.TappableRectangle
 
-			logo := LogoIcon(10)
-			logo.Hide()
+	// createHeaderLabel creates a new header label.
+	createHeaderLabel := func(text string, c color.Color, width float32) *iw.ColorLabel {
+		label := iw.NewColorLabel(text, c)
+		label.SetMinWidth(width)
+		label.SetTextStyle(fyne.TextStyle{Bold: true})
+		return label
+	}
 
-			hbox := container.NewHBox(logo, text)
+	// createCellLabel creates a new cell label.
+	createCellLabel := func(text string, c color.Color, width float32) *iw.ColorLabel {
+		label := iw.NewColorLabel(text, c)
+		label.SetMinWidth(width)
+		return label
+	}
 
-			return container.New(layout.NewCustomPaddedLayout(0, 0, 10, 10), hbox)
-		},
-		func(i widget.TableCellID, o fyne.CanvasObject) {
-			c := o.(*fyne.Container)
-
-			hbox := c.Objects[0].(*fyne.Container)
-
-			text := hbox.Objects[1].(*canvas.Text)
-			text.Text = data[i.Row][i.Col]
-			text.Color = theme.Color(theme.ColorNameForeground)
-			text.TextStyle = fyne.TextStyle{Bold: false, Italic: false}
-
-			logo := hbox.Objects[0].(*canvas.Image)
-
-			// Row 0 is the header
-			if i.Row == 0 {
-				text.TextStyle = fyne.TextStyle{Bold: true}
-			} else {
-				// date column is gray
-				if i.Col == 0 {
-					text.Color = Grey
-				}
-
-				// rewards column
-				if i.Col == 4 {
-					logo.Show()
-				} else {
-					logo.Hide()
-				}
+	// createRewardItem creates a new reward item.
+	createRewardItem := func(row algo.PayoutDate, l *appLayout, r *algo.Rewards, selected **iw.TappableRectangle) *fyne.Container {
+		rec := iw.NewTappableRectangle(color.Transparent, func() {
+			fmt.Println("Tapped on reward:", row.Date)
+			l.bottomBar = RewardsPanel(account, r)
+			l.container.Objects[2].(*fyne.Container).RemoveAll()
+			for _, obj := range l.bottomBar.(*fyne.Container).Objects {
+				l.container.Objects[2].(*fyne.Container).Add(obj)
 			}
-		})
+			l.container.Objects[2].(*fyne.Container).Refresh()
+		}, selected)
+		rec.SetHoverColor(theme.Color(theme.ColorNameHover))
+		rec.SetSelectedColor(theme.Color(theme.ColorNameSelection))
 
-	table.StickyRowCount = 1 // Sticky header
-	table.HideSeparators = false
+		if *selected == nil {
+			switch app.CurrentApp().RewardsView() {
+			case "dayOfWeek":
+				if row.Date == time.Now().Weekday().String() {
+					rec.Select()
+				}
+			default:
+				rec.Select()
+			}
+		}
 
-	// Set column widths
-	for i := range data[0] {
-		table.SetColumnWidth(i, 150)
+		item := container.NewStack(
+			rec,
+			container.New(layout.NewCustomPaddedLayout(0, 0, 5, 5),
+				container.NewHBox(
+					createCellLabel(row.Date, Grey, 120),
+					createCellLabel(fmt.Sprintf("%d", row.TotalWins), theme.Color(theme.ColorNameForeground), 80),
+					createCellLabel(format.Float(row.AlgoFeesCollected()), theme.Color(theme.ColorNameForeground), 140),
+					createCellLabel(format.Float(row.AlgoBonus()), theme.Color(theme.ColorNameForeground), 140),
+					AlgoIcon(10),
+					createCellLabel(format.Float(row.AlgoPayout()), theme.Color(theme.ColorNameForeground), 140),
+				),
+			),
+		)
+		return item
 	}
 
-	// Set row heights
-	for i := range data {
-		table.SetRowHeight(i, 30)
+	// loadMore loads more rewards.
+	loadMore := func() {
+		end := min(offset+batchSize, len(data))
+		for _, row := range data[offset:end] {
+			item := createRewardItem(row, l, r, &selected)
+			content.Add(item)
+			content.Add(widget.NewSeparator())
+		}
+		offset = end
 	}
 
-	return container.New(layout.NewCustomPaddedLayout(0, 0, 10, 10), table)
+	// Add sticky header
+	header := container.NewHBox(
+		createHeaderLabel("Date", theme.Color(theme.ColorNameForeground), 120),
+		createHeaderLabel("Wins", theme.Color(theme.ColorNameForeground), 80),
+		createHeaderLabel("Fees Collected", theme.Color(theme.ColorNameForeground), 140),
+		createHeaderLabel("Bonus", theme.Color(theme.ColorNameForeground), 140),
+		createHeaderLabel("Rewards", theme.Color(theme.ColorNameForeground), 140),
+	)
+	headerContainer := container.New(layout.NewCustomPaddedLayout(0, 0, 10, 0), header)
+
+	content = container.NewVBox()
+	scroll := container.NewVScroll(container.New(layout.NewCustomPaddedLayout(0, 0, 5, 5), content))
+	scroll.SetMinSize(fyne.NewSize(0, 270))
+
+	scroll.OnScrolled = func(p fyne.Position) {
+		// Load more rewards when near the bottom.
+		if p.Y > scroll.Content.Size().Height-scroll.Size().Height-100 {
+			loadMore()
+		}
+	}
+
+	l = newAppLayout()
+	l.mainContent = container.NewVBox(headerContainer, scroll)
+	l.bottomBar = RewardsPanel(account, r)
+	l.container = l.render()
+
+	loadMore() // Initial load
+
+	return l.container
 }
 
 // RewardsExportDialog opens a dialog to export rewards.
-func RewardsExportDialog(w fyne.Window) {
-	DialogOpen = true
+func RewardsExportDialog(a *app.App, w fyne.Window) {
 	d := dialog.NewFileSave(
 		func(writer fyne.URIWriteCloser, err error) {
 			if err != nil {
@@ -138,16 +191,13 @@ func RewardsExportDialog(w fyne.Window) {
 				return
 			}
 			defer writer.Close()
-			algo.ExportRewards(writer)
+			algo.ExportRewards(a.Address(), writer)
 		},
 		w,
 	)
 	d.SetFileName("rewards.csv")
 	d.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
 	d.SetView(dialog.ListView)
-	d.Resize(fyne.NewSize(MainWindowWidth-50, MainWindowHeight-50))
+	d.Resize(fyne.NewSize(MainWindowWidth-20, MainWindowHeight-20))
 	d.Show()
-	d.SetOnClosed(func() {
-		DialogOpen = false
-	})
 }

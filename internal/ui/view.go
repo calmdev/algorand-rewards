@@ -1,43 +1,61 @@
 package ui
 
 import (
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"github.com/calmdev/algorand-rewards/internal/algo"
+	"github.com/calmdev/algorand-rewards/internal/app"
 )
 
-var (
-	// MainWindowWidth is the main window width.
-	MainWindowWidth float32 = 800
-	// MainWindowHeight is the main window height.
+const (
+	// Main window dimensions
+	MainWindowWidth  float32 = 800
 	MainWindowHeight float32 = 400
-	// DialogOpen is true when a dialog is open.
-	DialogOpen = false
 )
 
-// RenderMainView returns the main view.
-func RenderMainView() fyne.CanvasObject {
-	payouts := algo.Payouts()
-	account := algo.FetchAccount()
-
-	return container.NewBorder(
-		Header(account),
-		RewardsPanel(payouts),
-		nil,
-		nil,
-		RewardsTable(payouts),
-	)
+// RenderView renders the given view.
+func RenderView(v View) {
+	v.Render(app.CurrentApp())
 }
 
-// RenderSettingsView returns the settings view.
-func RenderSettingsView() fyne.CanvasObject {
-	account := algo.FetchAccount()
+// View interface represents a view.
+type View interface {
+	Render(a *app.App)
+}
 
-	return container.NewBorder(
-		Header(account),
-		nil,
-		nil,
-		nil,
-		SettingsForm(),
-	)
+// RewardsView struct represents the rewards view.
+type RewardsView struct{}
+
+// Render renders the rewards view.
+func (v *RewardsView) Render(a *app.App) {
+	Layout.loading()
+
+	go func() {
+		account := algo.FetchAccount(a.Address())
+		rewards := algo.FetchRewards(a.Address())
+
+		Layout.updateTopBar(Header(account))
+		Layout.updateMainContent(RewardsList(account, rewards))
+		Layout.currentView = v
+	}()
+
+	Layout.markActiveButton(0)
+}
+
+// SettingsView struct represents the settings view.
+type SettingsView struct{}
+
+// Render renders the settings view.
+func (v *SettingsView) Render(a *app.App) {
+	Layout.loading()
+
+	go func() {
+		account := algo.FetchAccount(a.Address())
+
+		Layout.updateTopBar(Header(account))
+	}()
+
+	Layout.updateMainContent(SettingsForm(a))
+	Layout.markActiveButton(2)
+	Layout.currentView = v
+}
+
 }

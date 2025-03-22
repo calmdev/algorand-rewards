@@ -6,18 +6,19 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
+	"github.com/calmdev/algorand-rewards/internal/app"
 )
 
 // MainMenu returns the main menu.
-func MainMenu(w fyne.Window) *fyne.MainMenu {
+func MainMenu(a *app.App, w fyne.Window) *fyne.MainMenu {
 	return fyne.NewMainMenu(
-		accountMenu(w),
-		rewardsMenu(w),
+		accountMenu(a, w),
+		rewardsMenu(a, w),
 	)
 }
 
 // accountMenu returns the account menu.
-func accountMenu(w fyne.Window) *fyne.Menu {
+func accountMenu(a *app.App, w fyne.Window) *fyne.Menu {
 	var refresh *fyne.MenuItem
 	var settings *fyne.MenuItem
 	var telemetry *fyne.MenuItem
@@ -25,7 +26,7 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 	refresh = &fyne.MenuItem{
 		Label: "Refresh",
 		Action: func() {
-			w.SetContent(RenderMainView())
+			RenderView(&RewardsView{})
 			w.Show()
 		},
 	}
@@ -33,7 +34,7 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 	settings = &fyne.MenuItem{
 		Label: "Settings",
 		Action: func() {
-			w.SetContent(RenderSettingsView())
+			RenderView(&SettingsView{})
 			w.Show()
 		},
 	}
@@ -41,9 +42,9 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 	telemetry = &fyne.MenuItem{
 		Label: "Telemetry",
 		Action: func() {
-			guid := fyne.CurrentApp().Preferences().String("GUID")
+			guid := a.GUID()
 			if guid == "" {
-				showTelemetryDialog(w)
+				dialog.ShowInformation("Telemetry", "Please set your GUID in the settings to enable telemetry.", w)
 				return
 			}
 			url := url.URL{
@@ -52,7 +53,7 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 				Path:     "/d/telemetry/node-telemetry",
 				RawQuery: fmt.Sprintf("var-GUID=%s&orgId=1&from=now-24h&to=now", guid),
 			}
-			if err := fyne.CurrentApp().OpenURL(&url); err != nil {
+			if err := a.OpenURL(&url); err != nil {
 				dialog.ShowError(err, w)
 			}
 		},
@@ -69,21 +70,71 @@ func accountMenu(w fyne.Window) *fyne.Menu {
 }
 
 // rewardsMenu returns the rewards menu.
-func rewardsMenu(w fyne.Window) *fyne.Menu {
+func rewardsMenu(a *app.App, w fyne.Window) *fyne.Menu {
 	var rewardsByDay *fyne.MenuItem
+	var rewardsByDayOfWeek *fyne.MenuItem
+	var rewardsByWeek *fyne.MenuItem
 	var rewardsByMonth *fyne.MenuItem
+	var rewardsByQuarter *fyne.MenuItem
+	var rewardsByYear *fyne.MenuItem
 	var exportRewards *fyne.MenuItem
 
-	rewardsViewPref := fyne.CurrentApp().Preferences().String("RewardsView")
+	rewardsViewPref := a.RewardsView()
+	toggleChecked := func(view string) {
+		rewardsByDay.Checked = false
+		rewardsByDayOfWeek.Checked = false
+		rewardsByWeek.Checked = false
+		rewardsByMonth.Checked = false
+		rewardsByQuarter.Checked = false
+		rewardsByYear.Checked = false
+		switch view {
+		case "day":
+			rewardsByDay.Checked = true
+			a.SetRewardsView(view)
+		case "dayOfWeek":
+			rewardsByDayOfWeek.Checked = true
+			a.SetRewardsView(view)
+		case "week":
+			rewardsByWeek.Checked = true
+			a.SetRewardsView(view)
+		case "month":
+			rewardsByMonth.Checked = true
+			a.SetRewardsView(view)
+		case "quarter":
+			rewardsByQuarter.Checked = true
+			a.SetRewardsView(view)
+		case "year":
+			rewardsByYear.Checked = true
+			a.SetRewardsView(view)
+		}
+	}
 
 	rewardsByDay = &fyne.MenuItem{
 		Label:   "By Day",
 		Checked: rewardsViewPref == "day" || rewardsViewPref == "",
 		Action: func() {
-			fyne.CurrentApp().Preferences().SetString("RewardsView", "day")
-			rewardsByDay.Checked = true
-			rewardsByMonth.Checked = false
-			w.SetContent(RenderMainView())
+			toggleChecked("day")
+			RenderView(&RewardsView{})
+			w.Show()
+		},
+	}
+
+	rewardsByDayOfWeek = &fyne.MenuItem{
+		Label:   "By Day of Week",
+		Checked: rewardsViewPref == "dayOfWeek",
+		Action: func() {
+			toggleChecked("dayOfWeek")
+			RenderView(&RewardsView{})
+			w.Show()
+		},
+	}
+
+	rewardsByWeek = &fyne.MenuItem{
+		Label:   "By Week",
+		Checked: rewardsViewPref == "week",
+		Action: func() {
+			toggleChecked("week")
+			RenderView(&RewardsView{})
 			w.Show()
 		},
 	}
@@ -92,10 +143,28 @@ func rewardsMenu(w fyne.Window) *fyne.Menu {
 		Label:   "By Month",
 		Checked: rewardsViewPref == "month",
 		Action: func() {
-			fyne.CurrentApp().Preferences().SetString("RewardsView", "month")
-			rewardsByDay.Checked = false
-			rewardsByMonth.Checked = true
-			w.SetContent(RenderMainView())
+			toggleChecked("month")
+			RenderView(&RewardsView{})
+			w.Show()
+		},
+	}
+
+	rewardsByQuarter = &fyne.MenuItem{
+		Label:   "By Quarter",
+		Checked: false,
+		Action: func() {
+			toggleChecked("quarter")
+			RenderView(&RewardsView{})
+			w.Show()
+		},
+	}
+
+	rewardsByYear = &fyne.MenuItem{
+		Label:   "By Year",
+		Checked: false,
+		Action: func() {
+			toggleChecked("year")
+			RenderView(&RewardsView{})
 			w.Show()
 		},
 	}
@@ -103,7 +172,25 @@ func rewardsMenu(w fyne.Window) *fyne.Menu {
 	exportRewards = &fyne.MenuItem{
 		Label: "Export Rewards",
 		Action: func() {
-			RewardsExportDialog(w)
+			RewardsExportDialog(a, w)
+		},
+	}
+
+	sep := fyne.NewMenuItemSeparator()
+
+	return fyne.NewMenu(
+		"Rewards",
+		rewardsByDay,
+		rewardsByDayOfWeek,
+		rewardsByWeek,
+		rewardsByMonth,
+		rewardsByQuarter,
+		rewardsByYear,
+		sep,
+		exportRewards,
+	)
+}
+
 		},
 	}
 

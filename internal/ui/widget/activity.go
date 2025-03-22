@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/calmdev/algorand-rewards/internal/app"
 )
 
 var _ fyne.Widget = (*Activity)(nil)
@@ -22,14 +23,16 @@ type Activity struct {
 
 	started atomic.Bool
 	color   color.Color
+	size    float32
 }
 
 // NewActivity returns a widget for indicating activity
 //
 // Since: 2.5
-func NewActivity(c color.Color) *Activity {
+func NewActivity(c color.Color, size float32) *Activity {
 	a := &Activity{
 		color: c,
+		size:  size,
 	}
 	a.ExtendBaseWidget(a)
 	return a
@@ -60,9 +63,8 @@ func (a *Activity) Stop() {
 
 func (a *Activity) CreateRenderer() fyne.WidgetRenderer {
 	dots := make([]fyne.CanvasObject, 3)
-	v := fyne.CurrentApp().Settings().ThemeVariant()
 	for i := range dots {
-		dots[i] = canvas.NewCircle(a.Theme().Color(theme.ColorNameForeground, v))
+		dots[i] = canvas.NewCircle(a.color)
 	}
 	r := &activityRenderer{dots: dots, parent: a}
 	r.anim = &fyne.Animation{
@@ -102,7 +104,7 @@ func (a *activityRenderer) Layout(size fyne.Size) {
 }
 
 func (a *activityRenderer) MinSize() fyne.Size {
-	return fyne.NewSquareSize(a.parent.Theme().Size(theme.SizeNameInlineIcon))
+	return fyne.NewSquareSize(a.parent.size)
 }
 
 func (a *activityRenderer) Objects() []fyne.CanvasObject {
@@ -181,7 +183,7 @@ func (a *activityRenderer) stop() {
 }
 
 func (a *activityRenderer) updateColor() {
-	v := fyne.CurrentApp().Settings().ThemeVariant()
+	v := app.CurrentApp().Settings().ThemeVariant()
 	rr, gg, bb, aa := a.parent.Theme().Color(theme.ColorNameForeground, v).RGBA()
 	a.maxCol = color.NRGBA{R: uint8(rr >> 8), G: uint8(gg >> 8), B: uint8(bb >> 8), A: uint8(aa >> 8)}
 }
